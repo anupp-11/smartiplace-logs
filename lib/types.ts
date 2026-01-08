@@ -28,6 +28,12 @@ export interface AttendanceLog {
   notes: string | null;
   punch_in_time: string | null;
   punch_out_time: string | null;
+  punch_in_latitude: number | null;
+  punch_in_longitude: number | null;
+  punch_in_address: string | null;
+  punch_out_latitude: number | null;
+  punch_out_longitude: number | null;
+  punch_out_address: string | null;
   recorded_by: string | null;
   created_at: string;
 }
@@ -100,4 +106,10 @@ export interface TodayPunchStatus {
   punchOutTime: string | null;
   status: 'present' | 'absent' | 'leave' | 'half-day' | null;
   attendanceId: string | null;
+}
+
+export interface PunchLocation {
+  latitude: number;
+  longitude: number;
+  address?: string;
 }

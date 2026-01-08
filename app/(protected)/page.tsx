@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { Card, CardContent, CardHeader } from '@/components/Card';
-import { getDashboardStats } from '@/lib/actions/attendance';
+import { getDashboardStats, getTodayAttendanceWithLocation } from '@/lib/actions/attendance';
 import { getCurrentUserRole } from '@/lib/actions/roles';
 import { getAllLeaveRequests } from '@/lib/actions/leave';
 import MemberDashboardClient from './MemberDashboardClient';
@@ -26,9 +26,10 @@ export default async function DashboardPage() {
 }
 
 async function AdminDashboard({ today }: { today: string }) {
-  const [statsResult, pendingLeavesResult] = await Promise.all([
+  const [statsResult, pendingLeavesResult, todayPunchesResult] = await Promise.all([
     getDashboardStats(),
     getAllLeaveRequests('pending'),
+    getTodayAttendanceWithLocation(),
   ]);
   
   const stats = statsResult.success ? statsResult.data : {
@@ -39,6 +40,21 @@ async function AdminDashboard({ today }: { today: string }) {
   };
 
   const pendingLeaves = pendingLeavesResult.success ? pendingLeavesResult.data : [];
+  const todayPunches = todayPunchesResult.success ? todayPunchesResult.data : [];
+
+  const formatTime = (isoString: string | null) => {
+    if (!isoString) return '—';
+    return new Date(isoString).toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+    });
+  };
+
+  const getGoogleMapsUrl = (lat: number | null, lng: number | null) => {
+    if (!lat || !lng) return null;
+    return `https://www.google.com/maps?q=${lat},${lng}`;
+  };
 
   return (
     <div className="space-y-6">
@@ -286,6 +302,105 @@ async function AdminDashboard({ today }: { today: string }) {
                   className="block text-center text-sm text-indigo-600 hover:text-indigo-800 py-2"
                 >
                   View all {pendingLeaves.length} pending requests →
+                </Link>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Today's Punches with Location */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-gray-900">Today&apos;s Punches</h2>
+            {todayPunches.length > 0 && (
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                {todayPunches.length} checked in
+              </span>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent>
+          {todayPunches.length === 0 ? (
+            <p className="text-center text-gray-500 py-4">No punches recorded today</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead>
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Punch In</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">In Location</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Punch Out</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Out Location</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {todayPunches.slice(0, 10).map((punch) => (
+                    <tr key={punch.id}>
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <div className="flex items-center gap-2">
+                          <div className="h-8 w-8 flex-shrink-0 bg-indigo-100 rounded-full flex items-center justify-center">
+                            <span className="text-indigo-700 font-medium text-xs">
+                              {punch.full_name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
+                            </span>
+                          </div>
+                          <span className="font-medium text-gray-900">{punch.full_name}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
+                        {formatTime(punch.punch_in_time)}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm">
+                        {punch.punch_in_latitude && punch.punch_in_longitude ? (
+                          <a
+                            href={getGoogleMapsUrl(punch.punch_in_latitude, punch.punch_in_longitude) || '#'}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-indigo-600 hover:text-indigo-800"
+                          >
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                            View Map
+                          </a>
+                        ) : (
+                          <span className="text-gray-400">—</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
+                        {formatTime(punch.punch_out_time)}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm">
+                        {punch.punch_out_latitude && punch.punch_out_longitude ? (
+                          <a
+                            href={getGoogleMapsUrl(punch.punch_out_latitude, punch.punch_out_longitude) || '#'}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-indigo-600 hover:text-indigo-800"
+                          >
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                            View Map
+                          </a>
+                        ) : (
+                          <span className="text-gray-400">—</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {todayPunches.length > 10 && (
+                <Link
+                  href="/logs"
+                  className="block text-center text-sm text-indigo-600 hover:text-indigo-800 py-3 border-t"
+                >
+                  View all {todayPunches.length} punches →
                 </Link>
               )}
             </div>

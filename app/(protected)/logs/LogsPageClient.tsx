@@ -99,14 +99,20 @@ export default function LogsPageClient() {
     const allLogs = result.data;
 
     // Create CSV content
-    const headers = ['Date', 'Person', 'Role', 'Status', 'Punch In', 'Punch Out', 'Notes', 'Recorded At'];
+    const headers = ['Date', 'Person', 'Role', 'Status', 'Punch In', 'In Location', 'Punch Out', 'Out Location', 'Notes', 'Recorded At'];
     const rows = allLogs.map(log => [
       log.attendance_date,
       log.people.full_name,
       log.people.role || '',
       log.status,
       log.punch_in_time ? new Date(log.punch_in_time).toLocaleTimeString() : '',
+      log.punch_in_latitude && log.punch_in_longitude 
+        ? `https://www.google.com/maps?q=${log.punch_in_latitude},${log.punch_in_longitude}` 
+        : '',
       log.punch_out_time ? new Date(log.punch_out_time).toLocaleTimeString() : '',
+      log.punch_out_latitude && log.punch_out_longitude 
+        ? `https://www.google.com/maps?q=${log.punch_out_latitude},${log.punch_out_longitude}` 
+        : '',
       log.notes || '',
       new Date(log.created_at).toLocaleString(),
     ]);
@@ -236,7 +242,13 @@ export default function LogsPageClient() {
                         Punch In
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        In Location
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Punch Out
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Out Location
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Notes
@@ -285,10 +297,46 @@ export default function LogsPageClient() {
                             ? new Date(log.punch_in_time).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
                             : '—'}
                         </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                          {log.punch_in_latitude && log.punch_in_longitude ? (
+                            <a
+                              href={`https://www.google.com/maps?q=${log.punch_in_latitude},${log.punch_in_longitude}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 text-indigo-600 hover:text-indigo-800"
+                            >
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                              </svg>
+                              View
+                            </a>
+                          ) : (
+                            <span className="text-gray-400">—</span>
+                          )}
+                        </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                           {log.punch_out_time 
                             ? new Date(log.punch_out_time).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
                             : '—'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                          {log.punch_out_latitude && log.punch_out_longitude ? (
+                            <a
+                              href={`https://www.google.com/maps?q=${log.punch_out_latitude},${log.punch_out_longitude}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 text-indigo-600 hover:text-indigo-800"
+                            >
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                              </svg>
+                              View
+                            </a>
+                          ) : (
+                            <span className="text-gray-400">—</span>
+                          )}
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">
                           {log.notes || '—'}

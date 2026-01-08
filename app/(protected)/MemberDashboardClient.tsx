@@ -8,7 +8,7 @@ import { useToast } from '@/components/Toast';
 import { getTodayPunchStatus, punchIn, punchOut, getCurrentUserPerson } from '@/lib/actions/punch';
 import { getMyLeaveRequests } from '@/lib/actions/leave';
 import { changePassword } from '@/lib/actions/auth';
-import type { TodayPunchStatus, LeaveRequest } from '@/lib/types';
+import type { TodayPunchStatus, LeaveRequest, PunchLocation } from '@/lib/types';
 
 interface MemberDashboardClientProps {
   today: string;
@@ -53,9 +53,40 @@ export default function MemberDashboardClient({ today }: MemberDashboardClientPr
     loadData();
   }, [loadData]);
 
+  const getLocation = (): Promise<PunchLocation | undefined> => {
+    return new Promise((resolve) => {
+      if (!navigator.geolocation) {
+        showToast('Geolocation is not supported by your browser', 'error');
+        resolve(undefined);
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          resolve({
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+          });
+        },
+        (error) => {
+          console.error('Geolocation error:', error);
+          // Still allow punch without location
+          showToast('Location access denied. Punching without location.', 'error');
+          resolve(undefined);
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0,
+        }
+      );
+    });
+  };
+
   const handlePunchIn = async () => {
     setPunching(true);
-    const result = await punchIn();
+    const location = await getLocation();
+    const result = await punchIn(location);
     if (result.success) {
       showToast('Punched in successfully!', 'success');
       loadData();
@@ -67,7 +98,8 @@ export default function MemberDashboardClient({ today }: MemberDashboardClientPr
 
   const handlePunchOut = async () => {
     setPunching(true);
-    const result = await punchOut();
+    const location = await getLocation();
+    const result = await punchOut(location);
     if (result.success) {
       showToast('Punched out successfully!', 'success');
       loadData();

@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
-import type { ActionResult, TodayPunchStatus, AttendanceLogWithPerson } from '@/lib/types';
+import type { ActionResult, TodayPunchStatus, AttendanceLogWithPerson, PunchLocation } from '@/lib/types';
 
 export async function getCurrentUserPerson(): Promise<ActionResult<{ id: string; full_name: string }>> {
   try {
@@ -79,7 +79,7 @@ export async function getTodayPunchStatus(): Promise<ActionResult<TodayPunchStat
   }
 }
 
-export async function punchIn(): Promise<ActionResult<void>> {
+export async function punchIn(location?: PunchLocation): Promise<ActionResult<void>> {
   try {
     const supabase = await createClient();
     
@@ -114,6 +114,12 @@ export async function punchIn(): Promise<ActionResult<void>> {
       return { success: false, error: 'You have already punched in today' };
     }
 
+    const locationData = location ? {
+      punch_in_latitude: location.latitude,
+      punch_in_longitude: location.longitude,
+      punch_in_address: location.address || null,
+    } : {};
+
     if (existing) {
       // Update existing record
       const { error } = await supabase
@@ -121,6 +127,7 @@ export async function punchIn(): Promise<ActionResult<void>> {
         .update({
           punch_in_time: now,
           status: 'present',
+          ...locationData,
         })
         .eq('id', existing.id);
 
@@ -137,6 +144,7 @@ export async function punchIn(): Promise<ActionResult<void>> {
           status: 'present',
           punch_in_time: now,
           recorded_by: user.id,
+          ...locationData,
         });
 
       if (error) {
@@ -152,7 +160,7 @@ export async function punchIn(): Promise<ActionResult<void>> {
   }
 }
 
-export async function punchOut(): Promise<ActionResult<void>> {
+export async function punchOut(location?: PunchLocation): Promise<ActionResult<void>> {
   try {
     const supabase = await createClient();
     
@@ -195,10 +203,17 @@ export async function punchOut(): Promise<ActionResult<void>> {
       return { success: false, error: 'You have already punched out today' };
     }
 
+    const locationData = location ? {
+      punch_out_latitude: location.latitude,
+      punch_out_longitude: location.longitude,
+      punch_out_address: location.address || null,
+    } : {};
+
     const { error } = await supabase
       .from('attendance_logs')
       .update({
         punch_out_time: now,
+        ...locationData,
       })
       .eq('id', existing.id);
 

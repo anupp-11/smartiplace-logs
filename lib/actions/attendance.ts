@@ -239,3 +239,65 @@ export async function getDashboardStats(): Promise<ActionResult<{
     return { success: false, error: 'Failed to fetch dashboard stats' };
   }
 }
+
+export interface TodayAttendanceWithLocation {
+  id: string;
+  person_id: string;
+  full_name: string;
+  status: 'present' | 'absent' | 'leave' | 'half-day';
+  punch_in_time: string | null;
+  punch_out_time: string | null;
+  punch_in_latitude: number | null;
+  punch_in_longitude: number | null;
+  punch_out_latitude: number | null;
+  punch_out_longitude: number | null;
+}
+
+export async function getTodayAttendanceWithLocation(): Promise<ActionResult<TodayAttendanceWithLocation[]>> {
+  try {
+    const supabase = await createClient();
+    const today = new Date().toISOString().split('T')[0];
+
+    const { data, error } = await supabase
+      .from('attendance_logs')
+      .select(`
+        id,
+        person_id,
+        status,
+        punch_in_time,
+        punch_out_time,
+        punch_in_latitude,
+        punch_in_longitude,
+        punch_out_latitude,
+        punch_out_longitude,
+        people!inner(full_name)
+      `)
+      .eq('attendance_date', today)
+      .not('punch_in_time', 'is', null)
+      .order('punch_in_time', { ascending: false });
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    const result: TodayAttendanceWithLocation[] = (data || []).map((record) => {
+      const people = record.people as unknown as { full_name: string };
+      return {
+        id: record.id,
+        person_id: record.person_id,
+        full_name: people.full_name,
+        status: record.status,
+        punch_in_time: record.punch_in_time,
+        punch_out_time: record.punch_out_time,
+        punch_in_latitude: record.punch_in_latitude,
+        punch_in_longitude: record.punch_in_longitude,
+        punch_out_latitude: record.punch_out_latitude,
+        punch_out_longitude: record.punch_out_longitude,
+      };
+    });
+
+    return { success: true, data: result };
+  } catch (_error) {
+    return { success: false, error: 'Failed to fetch today attendance with location' };
+  }
+}
