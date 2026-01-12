@@ -333,4 +333,5 @@ Both tables have RLS enabled with these policies:
 
 ## License
 
-MIT
+MIT 
+Trigger
