@@ -26,16 +26,23 @@ export default function LoginPage() {
           showToast('Account created! You can now log in.', 'success');
           setIsSignUp(false);
         }
+        setLoading(false);
       } else {
         const result = await login(formData);
+        // If we get here without redirect, there was an error
         if (!result.success) {
           setError(result.error);
+          setLoading(false);
         }
-        // If successful, the server action will redirect
+        // If successful, the server action will redirect and we won't reach here
       }
-    } catch {
+    } catch (err) {
+      // Check if this is a redirect (Next.js throws NEXT_REDIRECT)
+      if (err && typeof err === 'object' && 'digest' in err && typeof (err as { digest: string }).digest === 'string' && (err as { digest: string }).digest.startsWith('NEXT_REDIRECT')) {
+        // This is a redirect, not an error - let it propagate
+        throw err;
+      }
       setError('An unexpected error occurred');
-    } finally {
       setLoading(false);
     }
   };

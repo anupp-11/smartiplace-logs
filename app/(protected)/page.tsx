@@ -44,11 +44,7 @@ async function AdminDashboard({ today }: { today: string }) {
 
   const formatTime = (isoString: string | null) => {
     if (!isoString) return '—';
-    return new Date(isoString).toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true,
-    });
+    return new Date(isoString).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
   };
 
   const getGoogleMapsUrl = (lat: number | null, lng: number | null) => {
